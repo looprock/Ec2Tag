@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+import os
+import sys
+import urllib2
+from boto import ec2
+
+def usage():
+	print "Usage: %s [tag to return]" % (sys.argv[0])
+
+if len(sys.argv) < 2:
+        usage()
+        sys.exit(1)
+else:
+	tagname = sys.argv[1]
+
+AWS_ACCESS_KEY_ID = "XXXX"
+AWS_SECRET_ACCESS_KEY = "YYYYYY"
+
+def metadata(url):
+        req = urllib2.Request(url)
+        response = urllib2.urlopen(req)
+        return response.read()
+
+ec2_instance_id = metadata('http://169.254.169.254/latest/meta-data/instance-id')
+ec2_region = metadata('http://169.254.169.254/latest/meta-data/placement/availability-zone')[:-1]
+
+conn = ec2.connect_to_region(region_name=ec2_region, aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+reservations = conn.get_all_instances()
+instances = [i for r in reservations for i in r.instances]
+for instance in instances:
+    if instance.__dict__['id'] == ec2_instance_id:
+	try:
+        	print instance.__dict__['tags'][tagname]
+	except:
+		print "ERROR - invalid tag: %s" % (tagname)
+		sys.exit(1)
